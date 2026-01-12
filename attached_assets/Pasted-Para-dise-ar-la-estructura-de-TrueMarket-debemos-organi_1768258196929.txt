@@ -1,0 +1,124 @@
+Para diseñar la estructura de **TrueMarket**, debemos organizar la navegación de manera que transmita la seguridad y profesionalismo que tu MVP propone. Aquí tienes el esquema detallado de la arquitectura de la información:
+
+### 1. Mapa del Sitio (Sitemap)
+
+La web debe dividirse en tres grandes áreas según el tipo de usuario y el flujo de confianza:
+
+* **Página de Inicio (Landing Page):**
+* 
+**Hero Section:** Propuesta de valor clara sobre la compra/venta segura de joyas y electrónica.
+
+
+* 
+**Buscador y Categorías:** Acceso directo a Joyas y Electrónica.
+
+
+* 
+**Sección "Cómo funciona":** Explicación del proceso de verificación física y despacho desde bodega.
+
+
+* 
+**Productos Destacados:** Galería de los 20-30 productos iniciales de prueba.
+
+
+
+
+* **Área del Comprador:**
+* 
+**Catálogo:** Filtros por estado del producto, marca y sello de verificación .
+
+
+* 
+**Ficha de Producto:** Fotos, reporte técnico de autenticidad, precio sugerido y botón de compra via Webpay.
+
+
+* 
+**Carrito/Checkout:** Selección de método de envío (Starken, Chilexpress, etc.).
+
+
+
+
+* **Área del Vendedor (Dashboard):**
+* **Panel Principal:** Resumen de ventas, productos activos e interesados.
+* 
+**Formulario de Carga:** Subida de detalles y fotos.
+
+
+* 
+**Verificación de Identidad:** Módulo para subir carnet o pasaporte (KYC) antes de publicar.
+
+
+* 
+**Gestión de Tienda:** Configuración para "Vendedores Pro" o "Mini-Shops".
+
+
+
+
+
+---
+
+### 2. Estructura de la Ficha de Producto (UX)
+
+Dado que el foco es la **confianza**, cada producto debe tener una estructura visual específica:
+
+| Sección | Elemento Clave | Propósito |
+| --- | --- | --- |
+| **Cabecera** | Sello de "Verificado por TrueMarket". | Confirmar autenticidad de inmediato.
+
+ |
+| **Multimedia** | Fotos reales y video de funcionamiento.
+
+ | Transparencia total del estado.
+
+ |
+| **Data Técnica** | Informe de la joyería o tienda técnica aliada.
+
+ | Validar materiales (oro/plata) o hardware.
+
+ |
+| **Precio** | Comparativa: "Precio Nuevo vs. Precio TrueMarket".
+
+ | Resaltar el ahorro y la oportunidad de inversión. |
+
+---
+
+### 3. Flujo de Navegación Crítico
+
+Para que el MVP funcione en las 3 semanas previstas, el flujo debe ser lineal:
+
+1. 
+**Captación:** El usuario llega por redes sociales o alianzas con técnicos.
+
+
+2. 
+**Publicación:** El vendedor completa el formulario y elige si envía el producto a bodega o a una tienda verificadora (ej. Emporio Joyas).
+
+
+3. 
+**Validación:** TrueMarket actualiza el estado a "Verificado" tras la revisión manual.
+
+
+4. 
+**Venta:** El comprador paga; el dinero queda retenido por TrueMarket hasta que el producto llega a destino.
+
+
+5. 
+**Post-venta:** Soporte vía WhatsApp y encuesta de satisfacción para validar métricas de éxito.
+
+
+
+---
+
+### 4. Elementos de Diseño Requeridos
+
+* **Botones de Acción (CTA):** Siempre en verde para acciones positivas ("Subir Producto", "Comprar ahora").
+* 
+**Componente de Confianza:** Un pie de página permanente que muestre los logos de los aliados logísticos y las tiendas verificadoras.
+
+
+* 
+**Banner de "TrueBox":** Espacio publicitario interno para las cajas sorpresa de stock lento.
+
+
+
+**¿Te gustaría que diseñemos ahora el guion o las preguntas exactas que debe llevar el formulario de subida de productos para joyería?**
