@@ -13,6 +13,7 @@ export function Navbar() {
     { href: "/catalogo", label: "Catálogo" },
     { href: "/como-funciona", label: "Cómo Funciona" },
     { href: "/vender", label: "Vender" },
+    { href: "/empresas", label: "Empresas" },
   ];
 
   return (
@@ -48,7 +49,7 @@ export function Navbar() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Buscar joyas, electrónica..."
+                placeholder="Buscar joyas, electrónica, autos, propiedades..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 bg-muted/50 border-transparent focus:border-primary focus:bg-background"
@@ -90,7 +91,7 @@ export function Navbar() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Buscar joyas, electrónica..."
+                  placeholder="Buscar joyas, electrónica, autos, propiedades..."
                   className="pl-10 bg-muted/50"
                   data-testid="input-search-mobile"
                 />

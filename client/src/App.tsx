@@ -10,6 +10,8 @@ import ProductDetail from "@/pages/ProductDetail";
 import SellerDashboard from "@/pages/SellerDashboard";
 import UploadProduct from "@/pages/UploadProduct";
 import HowItWorksPage from "@/pages/HowItWorks";
+import TrueBox from "@/pages/TrueBox";
+import RegisterCompany from "@/pages/RegisterCompany";
 
 function Router() {
   return (
@@ -20,6 +22,8 @@ function Router() {
       <Route path="/dashboard" component={SellerDashboard} />
       <Route path="/vender" component={UploadProduct} />
       <Route path="/como-funciona" component={HowItWorksPage} />
+      <Route path="/truebox" component={TrueBox} />
+      <Route path="/empresas" component={RegisterCompany} />
       <Route component={NotFound} />
     </Switch>
   );
