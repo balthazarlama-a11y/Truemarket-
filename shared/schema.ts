@@ -3,17 +3,8 @@ import { pgTable, text, varchar, boolean, timestamp, integer } from "drizzle-orm
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// ── Users table ──────────────────────────────────────────────
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: text("email").notNull().unique(),
-  name: text("name").notNull(),
-  password: text("password").notNull(),
-  role: text("role").notNull().default("buyer"), // "buyer" | "seller"
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
 // ── Companies table ──────────────────────────────────────────
+// userId now stores the Clerk user ID (e.g. "user_xxx")
 export const companies = pgTable("companies", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(),
@@ -45,20 +36,7 @@ export const products = pgTable("products", {
 
 // ── Zod Schemas ──────────────────────────────────────────────
 
-// Buyer registration
-export const insertUserSchema = createInsertSchema(users).pick({
-  email: true,
-  name: true,
-  password: true,
-});
-
-// Login
-export const loginSchema = z.object({
-  email: z.string().email("Email inválido"),
-  password: z.string().min(1, "Password requerido"),
-});
-
-// Company registration (extended)
+// Company registration (company data only — auth handled by Clerk)
 export const insertCompanySchema = createInsertSchema(companies).pick({
   companyName: true,
   rut: true,
@@ -67,22 +45,6 @@ export const insertCompanySchema = createInsertSchema(companies).pick({
   companyType: true,
   phone: true,
   address: true,
-});
-
-// Combined company + user registration
-export const registerCompanySchema = z.object({
-  // User fields
-  email: z.string().email("Email inválido"),
-  name: z.string().min(1, "Nombre requerido"),
-  password: z.string().min(6, "Mínimo 6 caracteres"),
-  // Company fields
-  companyName: z.string().min(1, "Nombre de empresa requerido"),
-  rut: z.string().min(1, "RUT requerido"),
-  description: z.string().optional(),
-  category: z.string().min(1, "Categoría requerida"),
-  companyType: z.string().min(1, "Tipo de empresa requerido"),
-  phone: z.string().min(1, "Teléfono requerido"),
-  address: z.string().optional(),
 });
 
 // Product creation
@@ -95,8 +57,6 @@ export const insertProductSchema = z.object({
 });
 
 // ── Types ────────────────────────────────────────────────────
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
 export type Company = typeof companies.$inferSelect;
 export type InsertCompany = z.infer<typeof insertCompanySchema>;
 export type Product = typeof products.$inferSelect;

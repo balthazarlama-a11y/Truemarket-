@@ -1,10 +1,13 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { SignIn, SignUp } from "@clerk/clerk-react";
+import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Catalog from "@/pages/Catalog";
@@ -14,14 +17,45 @@ import UploadProduct from "@/pages/UploadProduct";
 import HowItWorksPage from "@/pages/HowItWorks";
 import TrueBox from "@/pages/TrueBox";
 import RegisterCompany from "@/pages/RegisterCompany";
-import AuthPage from "@/pages/AuthPage";
 import CompanyDirectory from "@/pages/CompanyDirectory";
 import CompanyProfile from "@/pages/CompanyProfile";
-import { Redirect } from "wouter";
 
-// Protected route that requires authentication
-function ProtectedRoute({ component: Component, requiredRole }: { component: React.ComponentType; requiredRole?: string }) {
-  const { user, isLoading } = useAuth();
+// Page wrapper for Clerk auth components
+function ClerkAuthPage({ mode }: { mode: "sign-in" | "sign-up" }) {
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+      <Navbar />
+      <main className="flex-1 flex items-center justify-center py-12 px-4">
+        {mode === "sign-in" ? (
+          <SignIn
+            routing="path"
+            path="/sign-in"
+            signUpUrl="/sign-up"
+            forceRedirectUrl="/"
+          />
+        ) : (
+          <SignUp
+            routing="path"
+            path="/sign-up"
+            signInUrl="/sign-in"
+            forceRedirectUrl="/"
+          />
+        )}
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+// Protected route that requires authentication + optional role
+function ProtectedRoute({
+  component: Component,
+  requiredRole,
+}: {
+  component: React.ComponentType;
+  requiredRole?: string;
+}) {
+  const { user, isLoading, isSignedIn } = useAuth();
 
   if (isLoading) {
     return (
@@ -31,11 +65,11 @@ function ProtectedRoute({ component: Component, requiredRole }: { component: Rea
     );
   }
 
-  if (!user) {
-    return <Redirect to="/auth" />;
+  if (!isSignedIn) {
+    return <Redirect to="/sign-in" />;
   }
 
-  if (requiredRole && user.role !== requiredRole) {
+  if (requiredRole && user?.role !== requiredRole) {
     return <Redirect to="/" />;
   }
 
@@ -46,20 +80,25 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/auth" component={AuthPage} />
+      <Route path="/sign-in">{() => <ClerkAuthPage mode="sign-in" />}</Route>
+      <Route path="/sign-in/:rest*">{() => <ClerkAuthPage mode="sign-in" />}</Route>
+      <Route path="/sign-up">{() => <ClerkAuthPage mode="sign-up" />}</Route>
+      <Route path="/sign-up/:rest*">{() => <ClerkAuthPage mode="sign-up" />}</Route>
       <Route path="/catalogo" component={Catalog} />
       <Route path="/producto/:id" component={ProductDetail} />
       <Route path="/dashboard">
-        {() => <ProtectedRoute component={SellerDashboard} requiredRole="seller" />}
+        {() => <ProtectedRoute component={SellerDashboard} requiredRole="business" />}
       </Route>
       <Route path="/vender">
-        {() => <ProtectedRoute component={UploadProduct} requiredRole="seller" />}
+        {() => <ProtectedRoute component={UploadProduct} requiredRole="business" />}
       </Route>
       <Route path="/como-funciona" component={HowItWorksPage} />
       <Route path="/truebox" component={TrueBox} />
       <Route path="/empresas" component={CompanyDirectory} />
       <Route path="/empresas/:id" component={CompanyProfile} />
-      <Route path="/registro-empresa" component={RegisterCompany} />
+      <Route path="/registro-empresa">
+        {() => <ProtectedRoute component={RegisterCompany} />}
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );
@@ -68,12 +107,10 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Router />
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }

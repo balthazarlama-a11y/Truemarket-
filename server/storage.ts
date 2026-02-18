@@ -1,26 +1,20 @@
-import { type User, type InsertUser, type Company, type InsertCompany, type Product, type InsertProduct, users, companies, products } from "@shared/schema";
+import { type Company, type InsertCompany, type Product, type InsertProduct, companies, products } from "@shared/schema";
 import { eq, ilike, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 
 // ── Interface ────────────────────────────────────────────────
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
-  createUser(user: InsertUser & { role?: string }): Promise<User>;
   createCompany(userId: string, company: Omit<InsertCompany, "email" | "name" | "password">): Promise<Company>;
   getCompanyByUserId(userId: string): Promise<Company | undefined>;
   getAllCompanies(): Promise<Company[]>;
   getCompanyById(id: string): Promise<Company | undefined>;
   getProductsByCompanyId(companyId: string): Promise<Product[]>;
-  // Product CRUD
   createProduct(companyId: string, product: InsertProduct): Promise<Product>;
   updateProduct(id: string, companyId: string, data: Partial<InsertProduct>): Promise<Product | undefined>;
   deleteProduct(id: string, companyId: string): Promise<boolean>;
   getProductById(id: string): Promise<Product | undefined>;
-  // View counter
   incrementCompanyViews(companyId: string): Promise<void>;
-  // Search
   searchGlobal(query: string): Promise<{ companies: Company[]; products: (Product & { companyName?: string })[] }>;
 }
 
@@ -40,29 +34,6 @@ function getDb() {
 }
 
 export class DatabaseStorage implements IStorage {
-  async getUser(id: string): Promise<User | undefined> {
-    const result = await getDb().select().from(users).where(eq(users.id, id)).limit(1);
-    return result[0];
-  }
-
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    const result = await getDb().select().from(users).where(eq(users.email, email)).limit(1);
-    return result[0];
-  }
-
-  async createUser(insertUser: InsertUser & { role?: string }): Promise<User> {
-    const result = await getDb()
-      .insert(users)
-      .values({
-        email: insertUser.email,
-        name: insertUser.name,
-        password: insertUser.password,
-        role: insertUser.role || "buyer",
-      })
-      .returning();
-    return result[0];
-  }
-
   async createCompany(
     userId: string,
     companyData: Omit<InsertCompany, "email" | "name" | "password">
@@ -105,7 +76,6 @@ export class DatabaseStorage implements IStorage {
     return await getDb().select().from(products).where(eq(products.companyId, companyId));
   }
 
-  // Product CRUD
   async createProduct(companyId: string, product: InsertProduct): Promise<Product> {
     const result = await getDb()
       .insert(products)
@@ -194,32 +164,9 @@ export class DatabaseStorage implements IStorage {
 
 // ── In-Memory Storage (fallback for dev without DB) ──────────
 export class MemStorage implements IStorage {
-  private users: Map<string, User> = new Map();
-  private companies: Map<string, Company> = new Map();
-  private products: Map<string, Product> = new Map();
+  private companiesMap: Map<string, Company> = new Map();
+  private productsMap: Map<string, Product> = new Map();
   private counter = 0;
-
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find((u) => u.email === email);
-  }
-
-  async createUser(insertUser: InsertUser & { role?: string }): Promise<User> {
-    const id = String(++this.counter);
-    const user: User = {
-      id,
-      email: insertUser.email,
-      name: insertUser.name,
-      password: insertUser.password,
-      role: insertUser.role || "buyer",
-      createdAt: new Date(),
-    };
-    this.users.set(id, user);
-    return user;
-  }
 
   async createCompany(
     userId: string,
@@ -241,24 +188,24 @@ export class MemStorage implements IStorage {
       viewCount: 0,
       createdAt: new Date(),
     };
-    this.companies.set(id, company);
+    this.companiesMap.set(id, company);
     return company;
   }
 
   async getCompanyByUserId(userId: string): Promise<Company | undefined> {
-    return Array.from(this.companies.values()).find((c) => c.userId === userId);
+    return Array.from(this.companiesMap.values()).find((c) => c.userId === userId);
   }
 
   async getAllCompanies(): Promise<Company[]> {
-    return Array.from(this.companies.values());
+    return Array.from(this.companiesMap.values());
   }
 
   async getCompanyById(id: string): Promise<Company | undefined> {
-    return this.companies.get(id);
+    return this.companiesMap.get(id);
   }
 
   async getProductsByCompanyId(companyId: string): Promise<Product[]> {
-    return Array.from(this.products.values()).filter((p) => p.companyId === companyId);
+    return Array.from(this.productsMap.values()).filter((p) => p.companyId === companyId);
   }
 
   async createProduct(companyId: string, product: InsertProduct): Promise<Product> {
@@ -274,31 +221,31 @@ export class MemStorage implements IStorage {
       status: "active",
       createdAt: new Date(),
     };
-    this.products.set(id, p);
+    this.productsMap.set(id, p);
     return p;
   }
 
   async updateProduct(id: string, companyId: string, data: Partial<InsertProduct>): Promise<Product | undefined> {
-    const existing = this.products.get(id);
+    const existing = this.productsMap.get(id);
     if (!existing || existing.companyId !== companyId) return undefined;
     const updated = { ...existing, ...data };
-    this.products.set(id, updated);
+    this.productsMap.set(id, updated);
     return updated;
   }
 
   async deleteProduct(id: string, companyId: string): Promise<boolean> {
-    const existing = this.products.get(id);
+    const existing = this.productsMap.get(id);
     if (!existing || existing.companyId !== companyId) return false;
-    this.products.delete(id);
+    this.productsMap.delete(id);
     return true;
   }
 
   async getProductById(id: string): Promise<Product | undefined> {
-    return this.products.get(id);
+    return this.productsMap.get(id);
   }
 
   async incrementCompanyViews(companyId: string): Promise<void> {
-    const company = this.companies.get(companyId);
+    const company = this.companiesMap.get(companyId);
     if (company) {
       company.viewCount = (company.viewCount || 0) + 1;
     }
@@ -306,20 +253,19 @@ export class MemStorage implements IStorage {
 
   async searchGlobal(query: string): Promise<{ companies: Company[]; products: (Product & { companyName?: string })[] }> {
     const q = query.toLowerCase();
-    const matchedCompanies = Array.from(this.companies.values()).filter(
+    const matchedCompanies = Array.from(this.companiesMap.values()).filter(
       (c) => c.companyName.toLowerCase().includes(q) || c.category?.toLowerCase().includes(q)
     );
-    const matchedProducts = Array.from(this.products.values())
+    const matchedProducts = Array.from(this.productsMap.values())
       .filter((p) => p.name.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q))
       .map((p) => ({
         ...p,
-        companyName: Array.from(this.companies.values()).find((c) => c.id === p.companyId)?.companyName,
+        companyName: Array.from(this.companiesMap.values()).find((c) => c.id === p.companyId)?.companyName,
       }));
     return { companies: matchedCompanies, products: matchedProducts };
   }
 }
 
-// Use DatabaseStorage if DATABASE_URL is set, otherwise MemStorage
 export const storage: IStorage = process.env.DATABASE_URL
   ? new DatabaseStorage()
   : new MemStorage();
