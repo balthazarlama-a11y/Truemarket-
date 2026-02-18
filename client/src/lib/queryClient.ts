@@ -1,5 +1,18 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+// Token getter set by the React app once Clerk loads
+let tokenGetter: (() => Promise<string | null>) | null = null;
+
+export function setAuthTokenGetter(fn: () => Promise<string | null>) {
+  tokenGetter = fn;
+}
+
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  if (!tokenGetter) return {};
+  const token = await tokenGetter();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -12,11 +25,14 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const authHeaders = await getAuthHeaders();
+  const headers: Record<string, string> = { ...authHeaders };
+  if (data) headers["Content-Type"] = "application/json";
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
   });
 
   await throwIfResNotOk(res);
@@ -28,18 +44,20 @@ export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
-      credentials: "include",
-    });
+    async ({ queryKey }) => {
+      const authHeaders = await getAuthHeaders();
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
-    }
+      const res = await fetch(queryKey.join("/") as string, {
+        headers: authHeaders,
+      });
 
-    await throwIfResNotOk(res);
-    return await res.json();
-  };
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        return null;
+      }
+
+      await throwIfResNotOk(res);
+      return await res.json();
+    };
 
 export const queryClient = new QueryClient({
   defaultOptions: {
