@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, Redirect } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,9 @@ import {
   Phone,
   MapPin,
   Briefcase,
+  Lock,
+  User,
+  Loader2,
 } from "lucide-react";
 
 const companyTypes = [
@@ -49,10 +53,34 @@ const categoriesToSell = [
 ];
 
 export default function RegisterCompany() {
+  const { user, registerCompanyMutation } = useAuth();
   const [step, setStep] = useState(1);
   const [companyType, setCompanyType] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [wantsVerification, setWantsVerification] = useState(false);
+
+  // Form data
+  const [formData, setFormData] = useState({
+    companyName: "",
+    rut: "",
+    phone: "",
+    email: "",
+    address: "",
+    name: "",
+    password: "",
+    confirmPassword: "",
+    description: "",
+  });
+  const [formError, setFormError] = useState("");
+
+  // Redirect if already logged in as seller
+  if (user && user.role === "seller") {
+    return <Redirect to="/dashboard" />;
+  }
+
+  const updateField = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
 
   const toggleCategory = (category: string) => {
     setSelectedCategories(prev =>
@@ -60,6 +88,32 @@ export default function RegisterCompany() {
         ? prev.filter(c => c !== category)
         : [...prev, category]
     );
+  };
+
+  const handleSubmit = () => {
+    setFormError("");
+
+    if (formData.password !== formData.confirmPassword) {
+      setFormError("Las contraseñas no coinciden");
+      return;
+    }
+    if (formData.password.length < 6) {
+      setFormError("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+
+    registerCompanyMutation.mutate({
+      email: formData.email,
+      name: formData.name,
+      password: formData.password,
+      companyName: formData.companyName,
+      rut: formData.rut,
+      description: formData.description,
+      category: selectedCategories.join(","),
+      companyType,
+      phone: formData.phone,
+      address: formData.address,
+    });
   };
 
   return (
@@ -84,19 +138,17 @@ export default function RegisterCompany() {
             {[1, 2, 3].map((s) => (
               <div key={s} className="flex items-center gap-2">
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors ${
-                    step >= s
+                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors ${step >= s
                       ? "bg-gradient-trust text-white"
                       : "bg-muted text-muted-foreground"
-                  }`}
+                    }`}
                 >
                   {step > s ? <CheckCircle2 className="w-5 h-5" /> : s}
                 </div>
                 {s < 3 && (
                   <div
-                    className={`w-16 h-0.5 ${
-                      step > s ? "bg-gradient-trust" : "bg-muted"
-                    }`}
+                    className={`w-16 h-0.5 ${step > s ? "bg-gradient-trust" : "bg-muted"
+                      }`}
                   />
                 )}
               </div>
@@ -117,6 +169,8 @@ export default function RegisterCompany() {
                   <Input
                     id="company-name"
                     placeholder="Ej: Joyería El Diamante S.A."
+                    value={formData.companyName}
+                    onChange={(e) => updateField("companyName", e.target.value)}
                     data-testid="input-company-name"
                   />
                 </div>
@@ -143,6 +197,8 @@ export default function RegisterCompany() {
                     <Input
                       id="rut"
                       placeholder="XX.XXX.XXX-X"
+                      value={formData.rut}
+                      onChange={(e) => updateField("rut", e.target.value)}
                       data-testid="input-rut"
                     />
                   </div>
@@ -151,34 +207,39 @@ export default function RegisterCompany() {
                     <Input
                       id="phone"
                       placeholder="+56 9 XXXX XXXX"
+                      value={formData.phone}
+                      onChange={(e) => updateField("phone", e.target.value)}
                       data-testid="input-phone"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email Corporativo *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="contacto@empresa.cl"
-                    data-testid="input-email"
+                  <Label htmlFor="address">Dirección</Label>
+                  <Textarea
+                    id="address"
+                    placeholder="Dirección completa de la empresa"
+                    value={formData.address}
+                    onChange={(e) => updateField("address", e.target.value)}
+                    data-testid="textarea-address"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="address">Dirección *</Label>
+                  <Label htmlFor="description">Descripción de la Empresa</Label>
                   <Textarea
-                    id="address"
-                    placeholder="Dirección completa de la empresa"
-                    data-testid="textarea-address"
+                    id="description"
+                    placeholder="Breve descripción de tu empresa y productos"
+                    value={formData.description}
+                    onChange={(e) => updateField("description", e.target.value)}
+                    data-testid="textarea-description"
                   />
                 </div>
 
                 <div className="flex justify-end">
                   <Button
                     onClick={() => setStep(2)}
-                    disabled={!companyType}
+                    disabled={!companyType || !formData.companyName || !formData.rut || !formData.phone}
                     className="bg-gradient-trust hover:opacity-90"
                     data-testid="button-next-step-1"
                   >
@@ -193,9 +254,9 @@ export default function RegisterCompany() {
           {step === 2 && (
             <Card className="animate-fade-in">
               <CardHeader>
-                <CardTitle>Categorías y Servicios</CardTitle>
+                <CardTitle>Categorías y Cuenta</CardTitle>
                 <CardDescription>
-                  Selecciona las categorías en las que venderás
+                  Selecciona categorías y crea tu cuenta de acceso
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -221,6 +282,78 @@ export default function RegisterCompany() {
                         </label>
                       </div>
                     ))}
+                  </div>
+                </div>
+
+                {/* Account credentials */}
+                <div className="p-4 bg-muted/30 rounded-lg border space-y-4">
+                  <h4 className="font-semibold flex items-center gap-2">
+                    <User className="w-4 h-4 text-primary" />
+                    Datos de tu Cuenta
+                  </h4>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-name">Nombre del Representante *</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="reg-name"
+                        placeholder="Tu nombre completo"
+                        value={formData.name}
+                        onChange={(e) => updateField("name", e.target.value)}
+                        className="pl-10"
+                        data-testid="input-reg-name"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-email">Email Corporativo *</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="reg-email"
+                        type="email"
+                        placeholder="contacto@empresa.cl"
+                        value={formData.email}
+                        onChange={(e) => updateField("email", e.target.value)}
+                        className="pl-10"
+                        data-testid="input-reg-email"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reg-password">Contraseña *</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="reg-password"
+                          type="password"
+                          placeholder="Mínimo 6 caracteres"
+                          value={formData.password}
+                          onChange={(e) => updateField("password", e.target.value)}
+                          className="pl-10"
+                          data-testid="input-reg-password"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="reg-confirm">Confirmar *</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="reg-confirm"
+                          type="password"
+                          placeholder="Repite tu contraseña"
+                          value={formData.confirmPassword}
+                          onChange={(e) => updateField("confirmPassword", e.target.value)}
+                          className="pl-10"
+                          data-testid="input-reg-confirm"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -261,7 +394,12 @@ export default function RegisterCompany() {
                   </Button>
                   <Button
                     onClick={() => setStep(3)}
-                    disabled={selectedCategories.length === 0}
+                    disabled={
+                      selectedCategories.length === 0 ||
+                      !formData.email ||
+                      !formData.name ||
+                      !formData.password
+                    }
                     className="bg-gradient-trust hover:opacity-90"
                     data-testid="button-next-step-2"
                   >
@@ -276,84 +414,42 @@ export default function RegisterCompany() {
           {step === 3 && (
             <Card className="animate-fade-in">
               <CardHeader>
-                <CardTitle>Documentación y Verificación</CardTitle>
+                <CardTitle>Confirmación</CardTitle>
                 <CardDescription>
-                  Sube los documentos necesarios para verificar tu empresa
+                  Revisa los datos y envía tu solicitud
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-start gap-3 mb-2">
-                      <FileText className="w-5 h-5 text-muted-foreground mt-0.5" />
-                      <div className="flex-1">
-                        <Label htmlFor="certificate" className="font-medium">
-                          Certificado de Constitución / Personalidad Jurídica *
-                        </Label>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          PDF máximo 5MB
-                        </p>
-                        <Input
-                          id="certificate"
-                          type="file"
-                          accept=".pdf"
-                          className="mt-2"
-                          data-testid="input-certificate"
-                        />
+                {/* Summary */}
+                <div className="space-y-3">
+                  <div className="p-4 bg-muted/30 rounded-lg border">
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-primary" />
+                      Resumen de Registro
+                    </h4>
+                    <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Empresa:</span>{" "}
+                        <span className="font-medium">{formData.companyName}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">RUT:</span>{" "}
+                        <span className="font-medium">{formData.rut}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Email:</span>{" "}
+                        <span className="font-medium">{formData.email}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Teléfono:</span>{" "}
+                        <span className="font-medium">{formData.phone}</span>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <span className="text-muted-foreground">Categorías:</span>{" "}
+                        <span className="font-medium">{selectedCategories.join(", ")}</span>
                       </div>
                     </div>
                   </div>
-
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-start gap-3 mb-2">
-                      <Briefcase className="w-5 h-5 text-muted-foreground mt-0.5" />
-                      <div className="flex-1">
-                        <Label htmlFor="bank-statement" className="font-medium">
-                          Estado de Cuenta Bancario (últimos 3 meses)
-                        </Label>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Para verificación de cuenta empresarial
-                        </p>
-                        <Input
-                          id="bank-statement"
-                          type="file"
-                          accept=".pdf,.jpg,.png"
-                          className="mt-2"
-                          data-testid="input-bank-statement"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {wantsVerification && (
-                    <div className="p-4 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                      <div className="flex items-start gap-3">
-                        <Shield className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5" />
-                        <div>
-                          <h4 className="font-semibold text-amber-900 dark:text-amber-100 mb-2">
-                            Documentación Adicional para Verificadores
-                          </h4>
-                          <div className="space-y-3">
-                            <div>
-                              <Label htmlFor="verifier-license" className="text-sm font-medium">
-                                Licencia o Certificado de Verificación *
-                              </Label>
-                              <Input
-                                id="verifier-license"
-                                type="file"
-                                accept=".pdf"
-                                className="mt-2"
-                                data-testid="input-verifier-license"
-                              />
-                            </div>
-                            <p className="text-xs text-amber-700 dark:text-amber-300">
-                              Documento que acredite tu capacidad para verificar productos
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 <div className="p-4 bg-muted/50 rounded-lg">
@@ -370,6 +466,17 @@ export default function RegisterCompany() {
                   </ul>
                 </div>
 
+                {(formError || registerCompanyMutation.isError) && (
+                  <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800">
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      {formError ||
+                        ((registerCompanyMutation.error as Error)?.message?.includes("409")
+                          ? "Este email ya está registrado"
+                          : "Error al crear la cuenta. Intenta de nuevo.")}
+                    </p>
+                  </div>
+                )}
+
                 <div className="flex justify-between">
                   <Button
                     variant="outline"
@@ -379,16 +486,32 @@ export default function RegisterCompany() {
                     Atrás
                   </Button>
                   <Button
+                    onClick={handleSubmit}
                     className="bg-gradient-trust hover:opacity-90"
+                    disabled={registerCompanyMutation.isPending}
                     data-testid="button-submit-company"
                   >
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Enviar Solicitud
+                    {registerCompanyMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                    )}
+                    Crear Cuenta de Empresa
                   </Button>
                 </div>
               </CardContent>
             </Card>
           )}
+
+          {/* Already have an account? */}
+          <div className="text-center mt-6">
+            <p className="text-sm text-muted-foreground">
+              ¿Ya tienes una cuenta?{" "}
+              <Link href="/auth" className="text-primary hover:underline font-medium">
+                Iniciar Sesión
+              </Link>
+            </p>
+          </div>
         </div>
       </main>
       <Footer />
