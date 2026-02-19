@@ -181,19 +181,6 @@ export default function UploadProduct() {
           <form onSubmit={handleSubmit}>
             <Card>
               <CardHeader>
-                <CardTitle>Imágenes del Producto</CardTitle>
-                <CardDescription>Sube fotos claras de tu producto. Máximo 5 imágenes.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ImageUpload value={images} onChange={setImages} />
-                <p className="text-xs text-muted-foreground mt-2">
-                  Tip: Toma fotos con buena iluminación y fondo neutro para vender más rápido.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="mt-6">
-              <CardHeader>
                 <CardTitle>Detalles</CardTitle>
                 <CardDescription>Información básica de tu venta</CardDescription>
               </CardHeader>
@@ -251,6 +238,19 @@ export default function UploadProduct() {
                     data-testid="textarea-description"
                   />
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Imágenes del Producto</CardTitle>
+                <CardDescription>Sube fotos claras de tu producto. Máximo 5 imágenes.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ImageUpload value={images} onChange={setImages} />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Tip: Toma fotos con buena iluminación y fondo neutro para vender más rápido.
+                </p>
               </CardContent>
             </Card>
 
