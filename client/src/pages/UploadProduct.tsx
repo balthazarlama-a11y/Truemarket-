@@ -26,6 +26,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { ImageUpload } from "@/components/ui/image-upload";
 
 const categories = [
   { value: "joyas-oro", label: "Joyas de Oro" },
@@ -49,7 +50,7 @@ export default function UploadProduct() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  const [images, setImages] = useState<string[]>([]);
   const [success, setSuccess] = useState(false);
 
   const publishMutation = useMutation({
@@ -59,7 +60,7 @@ export default function UploadProduct() {
         description: description || undefined,
         price: price || undefined,
         category: category || undefined,
-        imageUrl: imageUrl || undefined,
+        images: images.length > 0 ? images : undefined,
       });
       return await res.json();
     },
@@ -112,7 +113,7 @@ export default function UploadProduct() {
               </div>
               <div className="flex flex-col gap-3">
                 <Button
-                  onClick={() => { setSuccess(false); setName(""); setDescription(""); setPrice(""); setCategory(""); setImageUrl(""); }}
+                  onClick={() => { setSuccess(false); setName(""); setDescription(""); setPrice(""); setCategory(""); setImages([]); }}
                   className="bg-gradient-trust"
                 >
                   <Package className="w-4 h-4 mr-2" />
@@ -180,8 +181,21 @@ export default function UploadProduct() {
           <form onSubmit={handleSubmit}>
             <Card>
               <CardHeader>
-                <CardTitle>Información del Producto</CardTitle>
-                <CardDescription>Agrega los detalles de tu producto</CardDescription>
+                <CardTitle>Imágenes del Producto</CardTitle>
+                <CardDescription>Sube fotos claras de tu producto. Máximo 5 imágenes.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ImageUpload value={images} onChange={setImages} />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Tip: Toma fotos con buena iluminación y fondo neutro para vender más rápido.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Detalles</CardTitle>
+                <CardDescription>Información básica de tu venta</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
@@ -236,21 +250,6 @@ export default function UploadProduct() {
                     onChange={(e) => setDescription(e.target.value)}
                     data-testid="textarea-description"
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="imageUrl">URL de Imagen (opcional)</Label>
-                  <Input
-                    id="imageUrl"
-                    type="url"
-                    placeholder="https://ejemplo.com/foto-producto.jpg"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    data-testid="input-image-url"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Puedes usar un enlace de imagen existente. Soporte de carga de archivos próximamente.
-                  </p>
                 </div>
               </CardContent>
             </Card>

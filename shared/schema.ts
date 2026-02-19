@@ -21,9 +21,7 @@ export const companies = pgTable("companies", {
 });
 
 // ── Products table ───────────────────────────────────────────
-// companyId is nullable: set for business products, null for user products
-// userId stores the Clerk user ID of whoever created the product
-// isVerified: true for business products, false for regular user products
+// images: array of image URLs (text[])
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   companyId: varchar("company_id"),
@@ -32,7 +30,7 @@ export const products = pgTable("products", {
   description: text("description"),
   price: text("price"),
   category: text("category"),
-  imageUrl: text("image_url"),
+  images: text("images").array(),
   status: text("status").default("active"),
   isVerified: boolean("is_verified").default(false),
   createdAt: timestamp("created_at").defaultNow(),
@@ -55,7 +53,7 @@ export const insertProductSchema = z.object({
   description: z.string().optional(),
   price: z.string().optional(),
   category: z.string().optional(),
-  imageUrl: z.string().optional(),
+  images: z.array(z.string()).optional(),
 });
 
 // ── Types ────────────────────────────────────────────────────

@@ -32,6 +32,7 @@ import {
   BadgeCheck,
   ImageIcon,
 } from "lucide-react";
+import { ImageUpload } from "@/components/ui/image-upload";
 
 interface Company {
   id: string;
@@ -52,7 +53,7 @@ interface Product {
   description: string | null;
   price: string | null;
   category: string | null;
-  imageUrl: string | null;
+  images: string[] | null;
   status: string | null;
   createdAt: string | null;
 }
@@ -82,7 +83,7 @@ export default function SellerDashboard() {
     description: "",
     price: "",
     category: "",
-    imageUrl: "",
+    images: [] as string[],
   });
 
   const { data: company, isLoading: companyLoading } = useQuery<Company>({
@@ -141,7 +142,7 @@ export default function SellerDashboard() {
   });
 
   function resetForm() {
-    setForm({ name: "", description: "", price: "", category: "", imageUrl: "" });
+    setForm({ name: "", description: "", price: "", category: "", images: [] });
   }
 
   function openEdit(product: Product) {
@@ -151,7 +152,7 @@ export default function SellerDashboard() {
       description: product.description || "",
       price: product.price || "",
       category: product.category || "",
-      imageUrl: product.imageUrl || "",
+      images: product.images || [],
     });
     setShowProductModal(true);
   }
@@ -293,9 +294,9 @@ export default function SellerDashboard() {
                               className="flex items-center gap-4 p-4 bg-muted/50 rounded-xl hover:bg-muted/80 transition-colors"
                               data-testid={`dashboard-product-${product.id}`}
                             >
-                              {product.imageUrl ? (
+                              {product.images && product.images.length > 0 ? (
                                 <img
-                                  src={product.imageUrl}
+                                  src={product.images[0]}
                                   alt={product.name}
                                   loading="lazy"
                                   className="w-16 h-16 rounded-lg object-cover"
@@ -445,12 +446,11 @@ export default function SellerDashboard() {
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium mb-1.5 block">URL de Imagen</label>
-              <Input
-                value={form.imageUrl}
-                onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                placeholder="https://..."
-                data-testid="input-product-image"
+              <label className="text-sm font-medium mb-1.5 block">Imágenes</label>
+              {/* Image Upload Component replaces the Input */}
+              <ImageUpload
+                value={form.images}
+                onChange={(newImages) => setForm({ ...form, images: newImages })}
               />
             </div>
             <DialogFooter>

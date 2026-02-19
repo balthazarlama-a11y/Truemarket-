@@ -72,7 +72,7 @@ export class DatabaseStorage implements IStorage {
       .select({
         id: products.id, companyId: products.companyId, userId: products.userId,
         name: products.name, description: products.description, price: products.price,
-        category: products.category, imageUrl: products.imageUrl, status: products.status,
+        category: products.category, images: products.images, status: products.status,
         isVerified: products.isVerified, createdAt: products.createdAt,
         companyName: companies.companyName,
       })
@@ -85,7 +85,7 @@ export class DatabaseStorage implements IStorage {
     const result = await getDb().insert(products).values({
       companyId, userId, name: product.name,
       description: product.description || null, price: product.price || null,
-      category: product.category || null, imageUrl: product.imageUrl || null,
+      category: product.category || null, images: product.images || null,
       status: "active", isVerified,
     }).returning();
     return result[0];
@@ -99,7 +99,7 @@ export class DatabaseStorage implements IStorage {
       ...(data.description !== undefined && { description: data.description || null }),
       ...(data.price !== undefined && { price: data.price || null }),
       ...(data.category !== undefined && { category: data.category || null }),
-      ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl || null }),
+      ...(data.images !== undefined && { images: data.images || null }),
     }).where(eq(products.id, id)).returning();
     return result[0];
   }
@@ -112,7 +112,7 @@ export class DatabaseStorage implements IStorage {
       ...(data.description !== undefined && { description: data.description || null }),
       ...(data.price !== undefined && { price: data.price || null }),
       ...(data.category !== undefined && { category: data.category || null }),
-      ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl || null }),
+      ...(data.images !== undefined && { images: data.images || null }),
     }).where(eq(products.id, id)).returning();
     return result[0];
   }
@@ -147,7 +147,7 @@ export class DatabaseStorage implements IStorage {
       .select({
         id: products.id, companyId: products.companyId, userId: products.userId,
         name: products.name, description: products.description, price: products.price,
-        category: products.category, imageUrl: products.imageUrl, status: products.status,
+        category: products.category, images: products.images, status: products.status,
         isVerified: products.isVerified, createdAt: products.createdAt,
         companyName: companies.companyName,
       })
@@ -207,7 +207,7 @@ export class MemStorage implements IStorage {
     const p: Product = {
       id, companyId, userId, name: product.name,
       description: product.description || null, price: product.price || null,
-      category: product.category || null, imageUrl: product.imageUrl || null,
+      category: product.category || null, images: product.images || null,
       status: "active", isVerified, createdAt: new Date(),
     };
     this.productsMap.set(id, p);
