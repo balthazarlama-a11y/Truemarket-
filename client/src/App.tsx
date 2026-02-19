@@ -100,7 +100,7 @@ function Router() {
         {() => <ProtectedRoute component={SellerDashboard} requiredRole="business" />}
       </Route>
       <Route path="/vender">
-        {() => <ProtectedRoute component={UploadProduct} requiredRole="business" />}
+        {() => <ProtectedRoute component={UploadProduct} />}
       </Route>
       <Route path="/como-funciona" component={HowItWorksPage} />
       <Route path="/truebox" component={TrueBox} />

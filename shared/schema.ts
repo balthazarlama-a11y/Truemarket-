@@ -4,7 +4,6 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // ── Companies table ──────────────────────────────────────────
-// userId now stores the Clerk user ID (e.g. "user_xxx")
 export const companies = pgTable("companies", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(),
@@ -22,21 +21,25 @@ export const companies = pgTable("companies", {
 });
 
 // ── Products table ───────────────────────────────────────────
+// companyId is nullable: set for business products, null for user products
+// userId stores the Clerk user ID of whoever created the product
+// isVerified: true for business products, false for regular user products
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  companyId: varchar("company_id").notNull(),
+  companyId: varchar("company_id"),
+  userId: varchar("user_id"),
   name: text("name").notNull(),
   description: text("description"),
   price: text("price"),
   category: text("category"),
   imageUrl: text("image_url"),
   status: text("status").default("active"),
+  isVerified: boolean("is_verified").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 // ── Zod Schemas ──────────────────────────────────────────────
 
-// Company registration (company data only — auth handled by Clerk)
 export const insertCompanySchema = createInsertSchema(companies).pick({
   companyName: true,
   rut: true,
@@ -47,7 +50,6 @@ export const insertCompanySchema = createInsertSchema(companies).pick({
   address: true,
 });
 
-// Product creation
 export const insertProductSchema = z.object({
   name: z.string().min(1, "Nombre requerido"),
   description: z.string().optional(),

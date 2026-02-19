@@ -182,6 +182,12 @@ export function Navbar() {
             {/* Clerk-aware user section */}
             <SignedIn>
               <div className="flex items-center gap-2">
+                <Link href="/vender">
+                  <Button variant="outline" size="sm" className="hidden sm:flex">
+                    <Package className="w-4 h-4 mr-2" />
+                    Vender
+                  </Button>
+                </Link>
                 {user?.role === "business" && (
                   <Link href="/dashboard">
                     <Button className="hidden sm:flex bg-gradient-trust hover:opacity-90 transition-opacity" size="sm">
@@ -252,6 +258,12 @@ export function Navbar() {
                 </Link>
               ))}
               <SignedIn>
+                <Link href="/vender" onClick={() => setMobileMenuOpen(false)}>
+                  <Button variant="outline" className="w-full">
+                    <Package className="w-4 h-4 mr-2" />
+                    Vender Producto
+                  </Button>
+                </Link>
                 {user?.role === "business" && (
                   <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
                     <Button variant="outline" className="w-full">

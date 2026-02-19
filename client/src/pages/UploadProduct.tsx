@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { useLocation, Link } from "wouter";
+import { useMutation } from "@tanstack/react-query";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -16,16 +16,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Upload,
-  Camera,
-  X,
-  Info,
-  ArrowRight,
   ArrowLeft,
   CheckCircle2,
+  Loader2,
   Package,
-  Truck,
+  Shield,
+  AlertTriangle,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 const categories = [
   { value: "joyas-oro", label: "Joyas de Oro" },
@@ -35,154 +35,164 @@ const categories = [
   { value: "laptops", label: "Laptops" },
   { value: "audifonos", label: "Audífonos" },
   { value: "camaras", label: "Cámaras" },
-];
-
-const conditions = [
-  { value: "nuevo", label: "Nuevo", description: "Sin usar, con etiquetas o empaque original" },
-  { value: "como-nuevo", label: "Como Nuevo", description: "Usado pocas veces, sin signos visibles de uso" },
-  { value: "excelente", label: "Excelente", description: "Mínimos signos de uso, funciona perfectamente" },
-  { value: "muy-bueno", label: "Muy Bueno", description: "Algunos signos de uso, funciona perfectamente" },
-  { value: "bueno", label: "Bueno", description: "Signos de uso visibles, funciona correctamente" },
-];
-
-const verificationOptions = [
-  { 
-    value: "bodega", 
-    label: "Enviar a Bodega TrueMarket", 
-    description: "Envía tu producto a nuestra bodega y nosotros nos encargamos de la verificación y despacho.",
-    icon: Package,
-  },
-  { 
-    value: "tienda", 
-    label: "Verificar en Tienda Aliada", 
-    description: "Lleva tu producto a una de nuestras tiendas verificadoras aliadas cerca de ti.",
-    icon: Truck,
-  },
+  { value: "accesorios", label: "Accesorios" },
+  { value: "otro", label: "Otro" },
 ];
 
 export default function UploadProduct() {
-  const [step, setStep] = useState(1);
-  const [images, setImages] = useState<string[]>([]);
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const isBusiness = user?.role === "business";
+
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
-  const [condition, setCondition] = useState("");
-  const [verificationMethod, setVerificationMethod] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [success, setSuccess] = useState(false);
 
-  const handleImageUpload = () => {
-    const demoImages = [
-      "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&h=400&fit=crop",
-      "https://images.unsplash.com/photo-1603561591411-07134e71a2a9?w=400&h=400&fit=crop",
-    ];
-    setImages([...images, demoImages[images.length % 2]]);
+  const publishMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/products", {
+        name,
+        description: description || undefined,
+        price: price || undefined,
+        category: category || undefined,
+        imageUrl: imageUrl || undefined,
+      });
+      return await res.json();
+    },
+    onSuccess: () => {
+      setSuccess(true);
+      toast({
+        title: "¡Producto publicado!",
+        description: isBusiness
+          ? "Tu producto ha sido publicado con verificación."
+          : "Tu producto ha sido publicado sin verificación.",
+      });
+    },
+    onError: (err: Error) => {
+      toast({
+        title: "Error al publicar",
+        description: err.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      toast({ title: "Error", description: "El nombre es requerido", variant: "destructive" });
+      return;
+    }
+    publishMutation.mutate();
   };
 
-  const removeImage = (index: number) => {
-    setImages(images.filter((_, i) => i !== index));
-  };
-
-  const totalSteps = 4;
+  if (success) {
+    return (
+      <div className="min-h-screen flex flex-col bg-muted/30">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center px-4">
+          <Card className="max-w-md w-full text-center">
+            <CardContent className="pt-8 pb-8 space-y-6">
+              <div className="w-20 h-20 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
+                <CheckCircle2 className="w-10 h-10 text-primary" />
+              </div>
+              <div>
+                <h2 className="font-display text-2xl font-bold text-foreground mb-2">
+                  ¡Producto Publicado!
+                </h2>
+                <p className="text-muted-foreground">
+                  {isBusiness
+                    ? "Tu producto ha sido publicado con el sello de verificación ✅"
+                    : "Tu producto ha sido publicado. Aparecerá como 'No Verificado' hasta que registres una empresa."}
+                </p>
+              </div>
+              <div className="flex flex-col gap-3">
+                <Button
+                  onClick={() => { setSuccess(false); setName(""); setDescription(""); setPrice(""); setCategory(""); setImageUrl(""); }}
+                  className="bg-gradient-trust"
+                >
+                  <Package className="w-4 h-4 mr-2" />
+                  Publicar Otro Producto
+                </Button>
+                <Link href="/">
+                  <Button variant="outline" className="w-full">
+                    Volver al Inicio
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-muted/30">
       <Navbar />
       <main className="flex-1">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8">
-            <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 mb-4">
+            <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 mb-4">
               <ArrowLeft className="w-4 h-4" />
-              Volver al Panel
+              Volver
             </Link>
             <h1 className="font-display text-2xl lg:text-3xl font-bold text-foreground mb-2">
-              Subir Producto
+              Publicar Producto
             </h1>
             <p className="text-muted-foreground">
-              Completa la información para publicar tu producto
+              Completa la información para publicar tu producto en TrueMarket
             </p>
           </div>
 
-          <div className="flex items-center gap-2 mb-8">
-            {[1, 2, 3, 4].map((s) => (
-              <div key={s} className="flex items-center flex-1">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                    s <= step
-                      ? 'bg-primary text-white'
-                      : 'bg-muted text-muted-foreground'
-                  }`}
-                >
-                  {s < step ? <CheckCircle2 className="w-4 h-4" /> : s}
-                </div>
-                {s < 4 && (
-                  <div className={`flex-1 h-1 mx-2 rounded-full transition-colors ${
-                    s < step ? 'bg-primary' : 'bg-muted'
-                  }`} />
-                )}
+          {/* Verification status banner */}
+          {isBusiness ? (
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-6 flex items-start gap-3">
+              <Shield className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+              <div>
+                <p className="font-medium text-foreground text-sm">Empresa Verificada</p>
+                <p className="text-xs text-muted-foreground">
+                  Tu producto se publicará con el sello de verificación ✅
+                </p>
               </div>
-            ))}
-          </div>
-
-          {step === 1 && (
-            <Card className="animate-fade-in">
-              <CardHeader>
-                <CardTitle>Fotos del Producto</CardTitle>
-                <CardDescription>
-                  Sube fotos claras y de alta calidad. Mínimo 3 fotos recomendadas.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
-                  {images.map((img, index) => (
-                    <div key={index} className="relative aspect-square rounded-xl overflow-hidden bg-muted">
-                      <img src={img} alt="" className="w-full h-full object-cover" />
-                      <button
-                        onClick={() => removeImage(index)}
-                        className="absolute top-2 right-2 w-6 h-6 bg-card rounded-full flex items-center justify-center shadow-md hover:bg-destructive hover:text-white transition-colors"
-                        data-testid={`button-remove-image-${index}`}
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    onClick={handleImageUpload}
-                    className="aspect-square rounded-xl border-2 border-dashed border-border hover:border-primary flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-primary transition-colors"
-                    data-testid="button-add-image"
-                  >
-                    <Camera className="w-6 h-6" />
-                    <span className="text-xs">Agregar</span>
-                  </button>
-                </div>
-
-                <div className="bg-muted/50 rounded-xl p-4 flex items-start gap-3">
-                  <Info className="w-5 h-5 text-primary mt-0.5" />
-                  <div className="text-sm text-muted-foreground">
-                    <p className="font-medium text-foreground mb-1">Consejos para mejores fotos:</p>
-                    <ul className="list-disc list-inside space-y-1">
-                      <li>Usa buena iluminación natural</li>
-                      <li>Muestra todos los ángulos del producto</li>
-                      <li>Incluye fotos de detalles y posibles defectos</li>
-                      <li>Para joyas: incluye foto con escala (moneda o regla)</li>
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            </div>
+          ) : (
+            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-6 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-medium text-foreground text-sm">Producto Sin Verificar</p>
+                <p className="text-xs text-muted-foreground">
+                  Tu producto se publicará como "No Verificado".{" "}
+                  <Link href="/registro-empresa" className="text-primary hover:underline">
+                    Registra tu empresa
+                  </Link>{" "}
+                  para obtener el sello de verificación.
+                </p>
+              </div>
+            </div>
           )}
 
-          {step === 2 && (
-            <Card className="animate-fade-in">
+          <form onSubmit={handleSubmit}>
+            <Card>
               <CardHeader>
                 <CardTitle>Información del Producto</CardTitle>
-                <CardDescription>
-                  Describe tu producto con el mayor detalle posible
-                </CardDescription>
+                <CardDescription>Agrega los detalles de tu producto</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Título del Producto</Label>
+                  <Label htmlFor="name">Nombre del Producto *</Label>
                   <Input
-                    id="title"
+                    id="name"
                     placeholder="Ej: Anillo de Oro 18K con Diamante 0.5ct"
-                    data-testid="input-product-title"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    data-testid="input-product-name"
                   />
                 </div>
 
@@ -204,202 +214,68 @@ export default function UploadProduct() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="brand">Marca (opcional)</Label>
-                    <Input id="brand" placeholder="Ej: Tiffany, Apple, Rolex" data-testid="input-brand" />
+                    <Label htmlFor="price">Precio (CLP)</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      placeholder="620000"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      data-testid="input-price"
+                    />
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Estado del Producto</Label>
-                  <RadioGroup value={condition} onValueChange={setCondition} className="grid gap-3">
-                    {conditions.map((cond) => (
-                      <label
-                        key={cond.value}
-                        className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${
-                          condition === cond.value
-                            ? 'border-primary bg-primary/5'
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                        data-testid={`radio-condition-${cond.value}`}
-                      >
-                        <RadioGroupItem value={cond.value} />
-                        <div>
-                          <p className="font-medium text-foreground">{cond.label}</p>
-                          <p className="text-sm text-muted-foreground">{cond.description}</p>
-                        </div>
-                      </label>
-                    ))}
-                  </RadioGroup>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="description">Descripción</Label>
                   <Textarea
                     id="description"
-                    placeholder="Describe el producto, su historia, cualquier defecto o característica especial..."
+                    placeholder="Describe el producto, su estado, marca, y cualquier detalle importante..."
                     rows={5}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
                     data-testid="textarea-description"
                   />
                 </div>
 
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="price">Precio (CLP)</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      placeholder="620000"
-                      data-testid="input-price"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="original-price">Precio Original (opcional)</Label>
-                    <Input
-                      id="original-price"
-                      type="number"
-                      placeholder="890000"
-                      data-testid="input-original-price"
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {step === 3 && (
-            <Card className="animate-fade-in">
-              <CardHeader>
-                <CardTitle>Método de Verificación</CardTitle>
-                <CardDescription>
-                  Elige cómo quieres que verifiquemos tu producto
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <RadioGroup value={verificationMethod} onValueChange={setVerificationMethod} className="grid gap-4">
-                  {verificationOptions.map((option) => (
-                    <label
-                      key={option.value}
-                      className={`flex items-start gap-4 p-6 rounded-xl border cursor-pointer transition-colors ${
-                        verificationMethod === option.value
-                          ? 'border-primary bg-primary/5'
-                          : 'border-border hover:border-primary/50'
-                      }`}
-                      data-testid={`radio-verification-${option.value}`}
-                    >
-                      <RadioGroupItem value={option.value} className="mt-1" />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <option.icon className="w-5 h-5 text-primary" />
-                          </div>
-                          <p className="font-semibold text-foreground">{option.label}</p>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{option.description}</p>
-                      </div>
-                    </label>
-                  ))}
-                </RadioGroup>
-
-                {verificationMethod === 'tienda' && (
-                  <div className="bg-muted/50 rounded-xl p-4">
-                    <p className="font-medium text-foreground mb-3">Tiendas Verificadoras Disponibles:</p>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between p-3 bg-card rounded-lg">
-                        <div>
-                          <p className="font-medium text-foreground text-sm">Emporio Joyas</p>
-                          <p className="text-xs text-muted-foreground">Providencia, Santiago</p>
-                        </div>
-                        <Button variant="outline" size="sm" data-testid="button-select-store-1">
-                          Seleccionar
-                        </Button>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-card rounded-lg">
-                        <div>
-                          <p className="font-medium text-foreground text-sm">TechCheck Center</p>
-                          <p className="text-xs text-muted-foreground">Las Condes, Santiago</p>
-                        </div>
-                        <Button variant="outline" size="sm" data-testid="button-select-store-2">
-                          Seleccionar
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {step === 4 && (
-            <Card className="animate-fade-in">
-              <CardHeader>
-                <CardTitle>Confirmar Publicación</CardTitle>
-                <CardDescription>
-                  Revisa los detalles antes de publicar
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="bg-primary/5 rounded-xl p-6 border border-primary/20 text-center">
-                  <CheckCircle2 className="w-16 h-16 mx-auto text-primary mb-4" />
-                  <h3 className="font-display text-xl font-bold text-foreground mb-2">
-                    ¡Listo para Publicar!
-                  </h3>
-                  <p className="text-muted-foreground mb-4">
-                    Tu producto será enviado a verificación y publicado una vez aprobado.
+                <div className="space-y-2">
+                  <Label htmlFor="imageUrl">URL de Imagen (opcional)</Label>
+                  <Input
+                    id="imageUrl"
+                    type="url"
+                    placeholder="https://ejemplo.com/foto-producto.jpg"
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    data-testid="input-image-url"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Puedes usar un enlace de imagen existente. Soporte de carga de archivos próximamente.
                   </p>
-                  <div className="text-sm text-muted-foreground">
-                    Tiempo estimado de verificación: <span className="font-medium text-foreground">24-48 horas</span>
-                  </div>
-                </div>
-
-                <div className="bg-muted/50 rounded-xl p-4 space-y-3">
-                  <h4 className="font-medium text-foreground">Próximos Pasos:</h4>
-                  <ol className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-start gap-2">
-                      <span className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center shrink-0 mt-0.5">1</span>
-                      {verificationMethod === 'bodega' 
-                        ? 'Recibirás instrucciones de envío por email'
-                        : 'Agenda una cita en la tienda verificadora'}
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center shrink-0 mt-0.5">2</span>
-                      Nuestro equipo verificará la autenticidad y estado
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center shrink-0 mt-0.5">3</span>
-                      Tu producto será publicado con el sello TrueMarket
-                    </li>
-                  </ol>
                 </div>
               </CardContent>
             </Card>
-          )}
 
-          <div className="flex justify-between mt-8">
-            <Button
-              variant="outline"
-              onClick={() => setStep(step - 1)}
-              disabled={step === 1}
-              data-testid="button-prev-step"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Anterior
-            </Button>
-            {step < totalSteps ? (
+            <div className="flex justify-end mt-6">
               <Button
-                onClick={() => setStep(step + 1)}
-                className="bg-gradient-trust"
-                data-testid="button-next-step"
+                type="submit"
+                className="bg-gradient-trust px-8"
+                disabled={publishMutation.isPending || !name.trim()}
+                data-testid="button-publish"
               >
-                Siguiente
-                <ArrowRight className="w-4 h-4 ml-2" />
+                {publishMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Publicando...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Publicar Producto
+                  </>
+                )}
               </Button>
-            ) : (
-              <Button className="bg-gradient-trust" data-testid="button-publish">
-                Publicar Producto
-                <CheckCircle2 className="w-4 h-4 ml-2" />
-              </Button>
-            )}
-          </div>
+            </div>
+          </form>
         </div>
       </main>
       <Footer />
