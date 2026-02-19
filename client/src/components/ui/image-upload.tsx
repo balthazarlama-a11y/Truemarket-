@@ -18,7 +18,7 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
         const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
         if (!cloudName || !uploadPreset) {
-            alert("Error de configuración: Faltan credenciales de Cloudinary");
+            console.error("Faltan credenciales de Cloudinary");
             return;
         }
 
@@ -50,7 +50,6 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
             onChange([...value, ...newUrls]);
         } catch (error) {
             console.error("Upload error:", error);
-            alert("Error al subir las imágenes. Intenta nuevamente.");
         } finally {
             setIsUploading(false);
         }
@@ -67,29 +66,45 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
         onChange(value.filter((url) => url !== urlToRemove));
     };
 
+    const isConfigured = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME && import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
     return (
         <div className="space-y-4">
             <div
                 {...getRootProps()}
                 className={cn(
                     "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors relative overflow-hidden",
-                    isDragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-primary/50",
+                    !isConfigured ? "border-destructive/50 bg-destructive/5 cursor-not-allowed" :
+                        isDragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-primary/50",
                     (disabled || isUploading) && "opacity-50 cursor-not-allowed"
                 )}
             >
-                <input {...getInputProps()} />
+                <input {...getInputProps()} disabled={!isConfigured || disabled || isUploading} />
                 <div className="flex flex-col items-center gap-2">
                     {isUploading ? (
                         <Loader2 className="h-10 w-10 text-muted-foreground animate-spin" />
+                    ) : !isConfigured ? (
+                        <div className="text-destructive flex flex-col items-center">
+                            <X className="h-10 w-10 mb-2" />
+                            <p className="font-semibold">Configuración Incompleta</p>
+                        </div>
                     ) : (
                         <Upload className="h-10 w-10 text-muted-foreground" />
                     )}
+
                     <p className="text-sm text-muted-foreground font-medium">
-                        {isUploading ? "Subiendo..." : "Arrastra imágenes aquí o haz clic para seleccionar"}
+                        {!isConfigured
+                            ? "Faltan variables de entorno de Cloudinary"
+                            : isUploading
+                                ? "Subiendo..."
+                                : "Arrastra imágenes aquí o haz clic para seleccionar"}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                        Soporta JPG, PNG, WEBP
-                    </p>
+
+                    {isConfigured && (
+                        <p className="text-xs text-muted-foreground">
+                            Soporta JPG, PNG, WEBP
+                        </p>
+                    )}
                 </div>
             </div>
 
