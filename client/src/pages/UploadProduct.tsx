@@ -55,13 +55,28 @@ export default function UploadProduct() {
 
   const publishMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/products", {
+      const payload = {
         name,
         description: description || undefined,
         price: price || undefined,
         category: category || undefined,
         images: images.length > 0 ? images : undefined,
-      });
+      };
+
+      const res = await apiRequest("POST", "/api/products", payload);
+
+      // If the response is not OK, extract the error message to throw it
+      if (!res.ok) {
+        let errorData;
+        try {
+          errorData = await res.json();
+        } catch (e) {
+          // Fallback if the server response wasn't JSON
+          throw new Error("Ocurrió un error inesperado al contactar con el servidor. Por favor, intenta de nuevo.");
+        }
+        throw new Error(errorData?.message || "Hubo un problema al publicar el producto. Por favor, intenta de nuevo o revisa tus datos.");
+      }
+
       return await res.json();
     },
     onSuccess: () => {
@@ -76,7 +91,7 @@ export default function UploadProduct() {
     onError: (err: Error) => {
       toast({
         title: "Error al publicar",
-        description: err.message,
+        description: err.message || "Hubo un problema al publicar el producto. Por favor, intenta de nuevo.",
         variant: "destructive",
       });
     },
