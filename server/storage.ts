@@ -29,7 +29,10 @@ function getDb() {
   if (!db) {
     const databaseUrl = process.env.DATABASE_URL;
     if (!databaseUrl) throw new Error("DATABASE_URL environment variable is required");
-    const pool = new pg.Pool({ connectionString: databaseUrl });
+    const pool = new pg.Pool({
+      connectionString: databaseUrl,
+      ssl: { rejectUnauthorized: false }
+    });
     db = drizzle(pool);
   }
   return db;

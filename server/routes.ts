@@ -55,13 +55,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/my/products", requireRole("business"), async (req, res) => {
-    const userId = getAuth(req).userId!;
-    const parsed = insertProductSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ message: "Datos inválidos", errors: parsed.error.flatten().fieldErrors });
-    const company = await storage.getCompanyByUserId(userId);
-    if (!company) return res.status(404).json({ message: "No tienes empresa registrada" });
-    const product = await storage.createProduct(company.id, userId, parsed.data, true);
-    res.status(201).json(product);
+    try {
+      const userId = getAuth(req).userId!;
+      const parsed = insertProductSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "Datos inválidos", errors: parsed.error.flatten().fieldErrors });
+      const company = await storage.getCompanyByUserId(userId);
+      if (!company) return res.status(404).json({ message: "No tienes empresa registrada" });
+      const product = await storage.createProduct(company.id, userId, parsed.data, true);
+      res.status(201).json(product);
+    } catch (error: any) {
+      console.error("Error creating product (/api/my/products):", error);
+      res.status(500).json({ message: "Internal Server Error", error: error.message || String(error) });
+    }
   });
 
   app.put("/api/my/products/:id", requireRole("business"), async (req, res) => {
@@ -86,18 +91,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ── User Products (Unverified or Verified based on company) ──
   app.post("/api/products", requireAuth, async (req, res) => {
-    const userId = getAuth(req).userId!;
-    const parsed = insertProductSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ message: "Datos inválidos", errors: parsed.error.flatten().fieldErrors });
+    try {
+      const userId = getAuth(req).userId!;
+      const parsed = insertProductSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "Datos inválidos", errors: parsed.error.flatten().fieldErrors });
 
-    const company = await storage.getCompanyByUserId(userId);
-    const product = await storage.createProduct(
-      company?.id || null,
-      userId,
-      parsed.data,
-      !!company // isVerified if company exists
-    );
-    res.status(201).json(product);
+      const company = await storage.getCompanyByUserId(userId);
+      const product = await storage.createProduct(
+        company?.id || null,
+        userId,
+        parsed.data,
+        !!company // isVerified if company exists
+      );
+      res.status(201).json(product);
+    } catch (error: any) {
+      console.error("Error creating product (/api/products):", error);
+      res.status(500).json({ message: "Internal Server Error", error: error.message || String(error) });
+    }
   });
 
   app.get("/api/user/products", requireAuth, async (req, res) => {

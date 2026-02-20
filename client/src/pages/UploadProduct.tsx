@@ -88,6 +88,14 @@ export default function UploadProduct() {
       toast({ title: "Error", description: "El nombre es requerido", variant: "destructive" });
       return;
     }
+    if (!price.trim()) {
+      toast({ title: "Error", description: "El precio es requerido", variant: "destructive" });
+      return;
+    }
+    if (!category) {
+      toast({ title: "Error", description: "La categoría es requerida", variant: "destructive" });
+      return;
+    }
     publishMutation.mutate();
   };
 

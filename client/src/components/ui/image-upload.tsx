@@ -3,6 +3,7 @@ import { useDropzone } from "react-dropzone";
 import { Upload, X, Loader2, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface ImageUploadProps {
     value: string[];
@@ -12,6 +13,7 @@ interface ImageUploadProps {
 
 export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
     const [isUploading, setIsUploading] = useState(false);
+    const { toast } = useToast();
 
     const onDrop = useCallback(async (acceptedFiles: File[]) => {
         const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
@@ -19,41 +21,72 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
 
         if (!cloudName || !uploadPreset) {
             console.error("Faltan credenciales de Cloudinary");
+            toast({
+                title: "Error de configuración",
+                description: "Faltan las credenciales de Cloudinary en el sistema.",
+                variant: "destructive",
+            });
             return;
         }
 
         try {
             setIsUploading(true);
             const newUrls: string[] = [];
+            let errorCount = 0;
 
             for (const file of acceptedFiles) {
                 const formData = new FormData();
                 formData.append("file", file);
                 formData.append("upload_preset", uploadPreset);
 
-                const response = await fetch(
-                    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-                    {
-                        method: "POST",
-                        body: formData,
+                try {
+                    const response = await fetch(
+                        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+                        {
+                            method: "POST",
+                            body: formData,
+                        }
+                    );
+
+                    if (!response.ok) {
+                        throw new Error("Error al subir imagen");
                     }
-                );
 
-                if (!response.ok) {
-                    throw new Error("Error al subir imagen");
+                    const data = await response.json();
+                    newUrls.push(data.secure_url);
+                } catch (err) {
+                    console.error("Single file upload error:", err);
+                    errorCount++;
                 }
-
-                const data = await response.json();
-                newUrls.push(data.secure_url);
             }
 
-            onChange([...value, ...newUrls]);
+            if (newUrls.length > 0) {
+                onChange([...value, ...newUrls]);
+                toast({
+                    title: "Imágenes subidas",
+                    description: `Se subieron ${newUrls.length} imágenes correctamente.`,
+                });
+            }
+
+            if (errorCount > 0) {
+                toast({
+                    title: "Error al subir",
+                    description: `No se pudieron subir ${errorCount} imágenes.`,
+                    variant: "destructive",
+                });
+            }
+
         } catch (error) {
             console.error("Upload error:", error);
+            toast({
+                title: "Error",
+                description: "Ocurrió un error inesperado al subir las imágenes.",
+                variant: "destructive",
+            });
         } finally {
             setIsUploading(false);
         }
-    }, [value, onChange]);
+    }, [value, onChange, toast]);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
