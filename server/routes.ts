@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { storage } from "./storage";
-import { insertProductSchema } from "@shared/schema";
+import { insertProductSchema } from "../shared/schema";
 import { requireAuth, requireRole } from "./middleware/auth";
 import { clerkMiddleware, getAuth } from "@clerk/express";
 

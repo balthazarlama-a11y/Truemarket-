@@ -1,4 +1,4 @@
-import { type Company, type InsertCompany, type Product, type InsertProduct, companies, products } from "@shared/schema";
+import { type Company, type InsertCompany, type Product, type InsertProduct, companies, products } from "../shared/schema";
 import { eq, ilike, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";

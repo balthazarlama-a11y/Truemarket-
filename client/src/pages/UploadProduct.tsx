@@ -64,19 +64,6 @@ export default function UploadProduct() {
       };
 
       const res = await apiRequest("POST", "/api/products", payload);
-
-      // If the response is not OK, extract the error message to throw it
-      if (!res.ok) {
-        let errorData;
-        try {
-          errorData = await res.json();
-        } catch (e) {
-          // Fallback if the server response wasn't JSON
-          throw new Error("Ocurrió un error inesperado al contactar con el servidor. Por favor, intenta de nuevo.");
-        }
-        throw new Error(errorData?.message || "Hubo un problema al publicar el producto. Por favor, intenta de nuevo o revisa tus datos.");
-      }
-
       return await res.json();
     },
     onSuccess: () => {
@@ -89,9 +76,20 @@ export default function UploadProduct() {
       });
     },
     onError: (err: Error) => {
+      let friendlyMessage = "Hubo un problema al publicar el producto. Por favor, intenta de nuevo.";
+      try {
+        const raw = err.message;
+        const jsonStart = raw.indexOf("{");
+        if (jsonStart !== -1) {
+          const parsed = JSON.parse(raw.slice(jsonStart));
+          if (parsed.message) friendlyMessage = parsed.message;
+        }
+      } catch {
+        // keep default friendlyMessage
+      }
       toast({
         title: "Error al publicar",
-        description: err.message || "Hubo un problema al publicar el producto. Por favor, intenta de nuevo.",
+        description: friendlyMessage,
         variant: "destructive",
       });
     },
