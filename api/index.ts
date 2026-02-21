@@ -25,11 +25,16 @@ async function init() {
 }
 
 export default async function handler(req: any, res: any) {
+    const sendJsonError = (status: number, message: string) => {
+        try {
+            if (!res.headersSent) res.status(status).json({ message });
+        } catch (_) {}
+    };
     try {
         await init();
         app(req, res);
     } catch (error) {
         console.error("Vercel Serverless Init Error:", error);
-        res.status(500).json({ message: "Error interno del servidor", error: String(error) });
+        sendJsonError(500, "Error interno del servidor");
     }
 }

@@ -91,9 +91,19 @@ export async function registerRoutes(app: Express): Promise<void> {
   // ── User Products (Unverified or Verified based on company) ──
   app.post("/api/products", requireAuth, async (req, res) => {
     try {
-      const userId = getAuth(req).userId!;
-      const parsed = insertProductSchema.safeParse(req.body);
-      if (!parsed.success) return res.status(400).json({ message: "Datos inválidos", errors: parsed.error.flatten().fieldErrors });
+      const auth = getAuth(req);
+      const userId = auth?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "No autenticado. Inicia sesión e intenta de nuevo." });
+      }
+      const body = req.body;
+      if (!body || typeof body !== "object") {
+        return res.status(400).json({ message: "No se recibió el cuerpo de la solicitud. Intenta de nuevo." });
+      }
+      const parsed = insertProductSchema.safeParse(body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Datos inválidos", errors: parsed.error.flatten().fieldErrors });
+      }
 
       const company = await storage.getCompanyByUserId(userId);
       const product = await storage.createProduct(
@@ -105,7 +115,8 @@ export async function registerRoutes(app: Express): Promise<void> {
       res.status(201).json(product);
     } catch (error: any) {
       console.error("Error creating product (/api/products):", error);
-      res.status(500).json({ message: "Internal Server Error", error: error.message || String(error) });
+      const message = error?.message || "Error al guardar el producto.";
+      res.status(500).json({ message });
     }
   });
 

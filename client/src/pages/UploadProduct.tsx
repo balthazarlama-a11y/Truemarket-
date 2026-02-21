@@ -82,7 +82,11 @@ export default function UploadProduct() {
         const jsonStart = raw.indexOf("{");
         if (jsonStart !== -1) {
           const parsed = JSON.parse(raw.slice(jsonStart));
-          if (parsed.message) friendlyMessage = parsed.message;
+          if (parsed.message && typeof parsed.message === "string") friendlyMessage = parsed.message;
+        } else if (raw.startsWith("401")) {
+          friendlyMessage = "Sesión expirada o no válida. Cierra sesión, vuelve a entrar e intenta de nuevo.";
+        } else if (raw.startsWith("500")) {
+          friendlyMessage = "Error del servidor. Espera un momento e intenta de nuevo.";
         }
       } catch {
         // keep default friendlyMessage
