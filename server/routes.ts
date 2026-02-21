@@ -2,24 +2,9 @@ import type { Express } from "express";
 import { storage } from "./storage";
 import { insertProductSchema } from "../shared/schema";
 import { requireAuth, requireRole } from "./middleware/auth";
-import { clerkMiddleware, getAuth } from "@clerk/express";
-
-// Wrap middleware so any sync/async error is passed to next(err) and we always return JSON
-function safeClerkMiddleware() {
-  const mw = clerkMiddleware();
-  return (req: any, res: any, next: any) => {
-    const wrappedNext = (err?: any) => (err ? next(err) : next());
-    try {
-      const result = mw(req, res, wrappedNext);
-      if (result && typeof result.catch === "function") result.catch((e: any) => next(e));
-    } catch (err) {
-      next(err);
-    }
-  };
-}
+import { getAuth } from "@clerk/express";
 
 export async function registerRoutes(app: Express): Promise<void> {
-  app.use(safeClerkMiddleware());
 
   // ── Companies ────────────────────────────────────────────────
   app.get("/api/companies", async (_req, res) => {
@@ -103,33 +88,57 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   // ── User Products (Unverified or Verified based on company) ──
   app.post("/api/products", requireAuth, async (req, res) => {
+    const rid = Date.now().toString(36);
+    console.log(`[${rid}] POST /api/products — incoming`);
+
     try {
+      // 1. Auth
       const auth = getAuth(req);
       const userId = auth?.userId;
+      console.log(`[${rid}] auth userId: ${userId ?? "MISSING"}`);
       if (!userId) {
         return res.status(401).json({ message: "No autenticado. Inicia sesión e intenta de nuevo." });
       }
+
+      // 2. Body guard — handles Vercel pre-parsed and Express-parsed bodies
       const body = req.body;
-      if (!body || typeof body !== "object") {
-        return res.status(400).json({ message: "No se recibió el cuerpo de la solicitud. Intenta de nuevo." });
-      }
-      const parsed = insertProductSchema.safeParse(body);
-      if (!parsed.success) {
-        return res.status(400).json({ message: "Datos inválidos", errors: parsed.error.flatten().fieldErrors });
+      const bodyType = body === null ? "null" : typeof body;
+      const bodyKeys = body && typeof body === "object" ? Object.keys(body) : [];
+      console.log(`[${rid}] body type=${bodyType}, keys=[${bodyKeys.join(",")}]`);
+
+      if (!body || typeof body !== "object" || bodyKeys.length === 0) {
+        return res.status(400).json({ message: "No se recibieron datos del producto." });
       }
 
+      // 3. Zod validation
+      const parsed = insertProductSchema.safeParse(body);
+      if (!parsed.success) {
+        const fieldErrors = parsed.error.flatten().fieldErrors;
+        console.log(`[${rid}] Zod FAILED:`, JSON.stringify(fieldErrors));
+        return res.status(400).json({ message: "Datos inválidos", errors: fieldErrors });
+      }
+      console.log(`[${rid}] Zod OK — name="${parsed.data.name}", price="${parsed.data.price ?? ""}"`);
+
+      // 4. Company lookup (determines verification badge)
       const company = await storage.getCompanyByUserId(userId);
+      const isVerified = !!company;
+      console.log(`[${rid}] company=${company?.id ?? "none"}, isVerified=${isVerified}`);
+
+      // 5. Persist
       const product = await storage.createProduct(
-        company?.id || null,
+        company?.id ?? null,
         userId,
         parsed.data,
-        !!company // isVerified if company exists
+        isVerified,
       );
-      res.status(201).json(product);
+      console.log(`[${rid}] CREATED product id=${product.id}`);
+
+      return res.status(201).json(product);
     } catch (error: any) {
-      console.error("Error creating product (/api/products):", error);
-      const message = error?.message || "Error al guardar el producto.";
-      res.status(500).json({ message });
+      console.error(`[${rid}] POST /api/products UNHANDLED:`, error?.stack ?? error);
+      if (!res.headersSent) {
+        return res.status(500).json({ message: "Error interno al guardar el producto. Intenta de nuevo." });
+      }
     }
   });
 

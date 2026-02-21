@@ -55,13 +55,12 @@ export default function UploadProduct() {
 
   const publishMutation = useMutation({
     mutationFn: async () => {
-      const payload = {
-        name,
-        description: description || undefined,
-        price: price || undefined,
-        category: category || undefined,
-        images: images.length > 0 ? images : undefined,
-      };
+      // Build payload with only non-empty fields (trimmed)
+      const payload: Record<string, unknown> = { name: name.trim() };
+      if (description.trim()) payload.description = description.trim();
+      if (price.trim()) payload.price = price.trim();
+      if (category) payload.category = category;
+      if (images.length > 0) payload.images = images;
 
       const res = await apiRequest("POST", "/api/products", payload);
       return await res.json();
@@ -76,27 +75,29 @@ export default function UploadProduct() {
       });
     },
     onError: (err: Error) => {
-      let friendlyMessage = "Hubo un problema al publicar el producto. Por favor, intenta de nuevo.";
+      console.error("[UploadProduct] publish error:", err);
+
+      let title = "Error al publicar";
+      let friendlyMessage = "Hubo un problema al publicar el producto. Intenta de nuevo.";
+
       try {
         const raw = err.message;
         const jsonStart = raw.indexOf("{");
         if (jsonStart !== -1) {
           const parsed = JSON.parse(raw.slice(jsonStart));
-          const msg = parsed.message ?? parsed.error;
-          if (msg && typeof msg === "string") friendlyMessage = msg;
-        } else if (raw.startsWith("401")) {
-          friendlyMessage = "Sesión expirada o no válida. Cierra sesión, vuelve a entrar e intenta de nuevo.";
-        } else if (raw.startsWith("500")) {
+          const serverMsg = parsed.message ?? parsed.error;
+          if (serverMsg && typeof serverMsg === "string") friendlyMessage = serverMsg;
+        } else if (raw.includes("401")) {
+          title = "Sesión expirada";
+          friendlyMessage = "Cierra sesión, vuelve a entrar e intenta de nuevo.";
+        } else if (raw.includes("500")) {
           friendlyMessage = "Error del servidor. Espera un momento e intenta de nuevo.";
         }
       } catch {
-        // keep default friendlyMessage
+        // keep default
       }
-      toast({
-        title: "Error al publicar",
-        description: friendlyMessage,
-        variant: "destructive",
-      });
+
+      toast({ title, description: friendlyMessage, variant: "destructive" });
     },
   });
 
