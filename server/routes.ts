@@ -1,11 +1,10 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertProductSchema } from "@shared/schema";
 import { requireAuth, requireRole } from "./middleware/auth";
 import { clerkMiddleware, getAuth } from "@clerk/express";
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express): Promise<void> {
   // Configured in main index.ts for production, but good to have local
   app.use(clerkMiddleware());
 
@@ -154,6 +153,4 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
 }
