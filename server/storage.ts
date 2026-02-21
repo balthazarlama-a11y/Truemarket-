@@ -33,6 +33,12 @@ function getDb() {
       connectionString: databaseUrl,
       ssl: { rejectUnauthorized: false }
     });
+
+    // Catch pool errors so they don't crash the serverless function process
+    pool.on('error', (err) => {
+      console.error('Unexpected error on idle client', err);
+    });
+
     db = drizzle(pool);
   }
   return db;

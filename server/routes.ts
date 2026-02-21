@@ -145,6 +145,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(results);
   });
 
+  // Global error handler for Express routes
+  app.use((err: any, req: any, res: any, next: any) => {
+    console.error("Express Global Error:", err);
+    res.status(500).json({
+      message: "Ha ocurrido un error inesperado al procesar tu solicitud.",
+      error: err.message || String(err)
+    });
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
