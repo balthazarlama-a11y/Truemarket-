@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import { createServer } from "http";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { clerkMiddleware } from "@clerk/express";
@@ -66,7 +67,8 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const httpServer = await registerRoutes(app);
+  await registerRoutes(app);
+  const httpServer = createServer(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
