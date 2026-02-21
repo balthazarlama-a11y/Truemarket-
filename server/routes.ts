@@ -4,9 +4,22 @@ import { insertProductSchema } from "../shared/schema";
 import { requireAuth, requireRole } from "./middleware/auth";
 import { clerkMiddleware, getAuth } from "@clerk/express";
 
+// Wrap middleware so any sync/async error is passed to next(err) and we always return JSON
+function safeClerkMiddleware() {
+  const mw = clerkMiddleware();
+  return (req: any, res: any, next: any) => {
+    const wrappedNext = (err?: any) => (err ? next(err) : next());
+    try {
+      const result = mw(req, res, wrappedNext);
+      if (result && typeof result.catch === "function") result.catch((e: any) => next(e));
+    } catch (err) {
+      next(err);
+    }
+  };
+}
+
 export async function registerRoutes(app: Express): Promise<void> {
-  // Configured in main index.ts for production, but good to have local
-  app.use(clerkMiddleware());
+  app.use(safeClerkMiddleware());
 
   // ── Companies ────────────────────────────────────────────────
   app.get("/api/companies", async (_req, res) => {
@@ -156,11 +169,12 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Global error handler for Express routes
-  app.use((err: any, req: any, res: any, next: any) => {
+  app.use((err: any, req: any, res: any, _next: any) => {
     console.error("Express Global Error:", err);
+    if (res.headersSent) return;
+    const msg = err?.message || String(err);
     res.status(500).json({
-      message: "Ha ocurrido un error inesperado al procesar tu solicitud.",
-      error: err.message || String(err)
+      message: msg || "Ha ocurrido un error inesperado al procesar tu solicitud."
     });
   });
 
